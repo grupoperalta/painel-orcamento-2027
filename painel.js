@@ -151,6 +151,45 @@
     campo.focus();
   }
 
+  // 23/10/2026: a aba aberta antes de uma publicação nova continua com a versão antiga (o painel roda inteiro na aba).
+  // Ao abrir, ao voltar para a aba e a cada 10 minutos, relê versao.js do servidor; se mudou, avisa para recarregar.
+  // minha = o salt do dados.js que ESTA aba carregou (e não o endereço, que o CDN pode servir de outra geração)
+  var minha = (window.ORC_ENC && window.ORC_ENC.s) || "";
+  var sonda = null, ultimaSonda = 0;
+  function versaoNova() {
+    if (document.getElementById("versao-nova")) { return; }
+    var d = document.createElement("div");
+    d.id = "versao-nova"; d.setAttribute("role", "alert");
+    d.style.cssText = "position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:50;background:#09212C;" +
+      "color:#fff;padding:12px 16px;border-radius:12px;font:600 14px/1.4 'Segoe UI',system-ui,sans-serif;" +
+      "box-shadow:0 4px 16px rgba(9,33,44,.3);display:flex;gap:12px;align-items:center;max-width:92vw";
+    d.appendChild(document.createTextNode("Há uma versão mais nova do painel publicada."));
+    var b = document.createElement("button");
+    b.type = "button"; b.textContent = "Recarregar";
+    b.style.cssText = "background:#EABA60;color:#09212C;border:0;border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer";
+    b.addEventListener("click", function () { location.reload(); });
+    d.appendChild(b);
+    document.body.appendChild(d);
+  }
+  function confereVersao() {
+    var agora = Date.now();
+    if (!minha || agora - ultimaSonda < 60000) { return; }
+    ultimaSonda = agora;
+    if (sonda) { sonda.remove(); }
+    window.ORC_VERSAO_NO_AR = "";
+    sonda = document.createElement("script");
+    sonda.src = "versao.js?t=" + agora;
+    sonda.addEventListener("load", function () {
+      var v = window.ORC_VERSAO_NO_AR;
+      if (v && v !== minha) { versaoNova(); }
+    });
+    document.head.appendChild(sonda);
+  }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) { confereVersao(); } });
+  window.addEventListener("focus", confereVersao);
+  setInterval(confereVersao, 600000);
+  confereVersao();
+
   form.addEventListener("submit", async function (ev) {
     ev.preventDefault();
     if (!window.crypto || !crypto.subtle || typeof DecompressionStream === "undefined") {
