@@ -91,11 +91,22 @@
     b.textContent = aberto ? "▸" : "▾";
   }
 
+  // foco em 2027 (04/11/2026): o botão "Só 2027" / "2026 e 2027" de cada abertura e da ficha (data-ano = id da caixa)
+  function anos(b) {
+    var caixa = document.getElementById(b.getAttribute("data-ano"));
+    if (!caixa) { return; }
+    var so = b.getAttribute("data-so") === "1";
+    caixa.classList.toggle("so27", so);
+    caixa.querySelectorAll("[data-ano]").forEach(function (x) { x.setAttribute("aria-pressed", String((x.getAttribute("data-so") === "1") === so)); });
+  }
+
   app.addEventListener("click", function (ev) {
     if (!P) { return; }
     if (ev.target.closest("[data-bloquear]")) { ev.preventDefault(); bloqueia(); return; }
     var tg = ev.target.closest(".tg");
     if (tg && tg.getAttribute("data-alvo")) { ev.preventDefault(); alterna(tg); return; }
+    var an = ev.target.closest("[data-ano]");
+    if (an) { ev.preventDefault(); anos(an); return; }
     var a = ev.target.closest("a[href]");
     if (!a) { return; }
     var h = a.getAttribute("href");
