@@ -67,15 +67,24 @@
       var a = li.querySelector("a");
       li.className = (a && a.getAttribute("href") === "/aba/" + pg[0]) ? "on" : "";
     });
-    if (empilha) { history.pushState({ k: k }, "", hashDe(k)); } else { history.replaceState({ k: k }, "", hashDe(k)); }
+    // i = quantos passos dentro do painel até aqui (o "← Voltar" só volta no histórico quando há para onde voltar)
+    var i = (history.state && typeof history.state.i === "number") ? history.state.i : 0;
+    if (empilha) { history.pushState({ k: k, i: i + 1 }, "", hashDe(k)); } else { history.replaceState({ k: k, i: i }, "", hashDe(k)); }
     var alvo = ancora ? document.getElementById(ancora) : null;
     if (alvo) { alvo.scrollIntoView(); } else { window.scrollTo(0, 0); }
     return true;
   }
 
+  function rola(ancora) {
+    var alvo = ancora ? document.getElementById(ancora) : null;
+    if (alvo) { alvo.scrollIntoView(); } else { window.scrollTo(0, 0); }
+  }
+
   function vai(href) {
     var u = new URL(href, "https://painel.invalid");
     var ancora = u.hash ? decodeURIComponent(u.hash.slice(1)) : "";
+    // a mesma tela: só rola (empilhar a mesma tela faria o "← Voltar" parecer travado)
+    if (chave(href) === atual) { rola(ancora); return; }
     if (mostra(chave(href), ancora, true)) { return; }
     aviso(u.pathname.indexOf("/dre/linha/") === 0
       ? "Na versão publicada, a lista completa de cada linha está na DRE consolidada. Nesta visão, abra a linha pelo botão ▸."
@@ -109,8 +118,12 @@
     if (an) { ev.preventDefault(); anos(an); return; }
     var a = ev.target.closest("a[href]");
     if (!a) { return; }
+    // 16/11/2026: "← Voltar" das telas de detalhe volta à tela de onde a pessoa veio (com o filtro dela); sem histórico, segue o link
+    if (a.hasAttribute("data-voltar") && history.state && history.state.i > 0) { ev.preventDefault(); history.back(); return; }
     var h = a.getAttribute("href");
-    if (!h || h.charAt(0) !== "/") { return; }          // âncora da própria página: o navegador cuida
+    // âncora da própria página (#receitas): só rola, sem mexer no endereço (o endereço guarda a tela aberta)
+    if (h && h.charAt(0) === "#") { ev.preventDefault(); rola(decodeURIComponent(h.slice(1))); return; }
+    if (!h || h.charAt(0) !== "/") { return; }
     ev.preventDefault();
     vai(h);
   });
@@ -149,6 +162,8 @@
 
   window.addEventListener("popstate", function (ev) {
     if (!P) { return; }
+    // endereço que só tem âncora (#id, sem tela): fica na tela aberta e rola até a âncora, sem voltar à Visão geral
+    if (!ev.state && location.hash && location.hash.charAt(1) !== "/") { rola(decodeURIComponent(location.hash.slice(1))); return; }
     var k = (ev.state && ev.state.k) || daHash() || P.padrao;
     if (k !== atual && !mostra(k, "", false)) { mostra(P.padrao, "", false); }
   });
